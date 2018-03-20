@@ -1426,6 +1426,7 @@ define([
     }
 
     function requestTiles(tileset) {
+        // TODO : sort requested tiles by priority here so we can avoid requests from being cancelled excessively
         var requestedTiles = tileset._requestedTiles;
         var length = requestedTiles.length;
         for (var i = 0; i < length; ++i) {
@@ -1599,8 +1600,6 @@ define([
         var length = selectedTiles.length;
         var tileVisible = tileset.tileVisible;
         var i;
-
-        console.log(tileset._hasMixedContent);
 
         var bivariateVisibilityTest = tileset._skipLevelOfDetail && tileset._hasMixedContent && frameState.context.stencilBuffer && length > 0;
 
