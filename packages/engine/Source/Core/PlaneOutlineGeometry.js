@@ -45,7 +45,7 @@ PlaneOutlineGeometry.pack = function (value, array) {
 /**
  * Retrieves an instance from a packed array.
  *
- * @param {number[]} array The packed array.
+ * @param {ArrayLike<number>} array The packed array.
  * @param {number} [startingIndex=0] The starting index of the element to be unpacked.
  * @param {PlaneOutlineGeometry} [result] The object into which to store the result.
  * @returns {PlaneOutlineGeometry} The modified result parameter or a new PlaneOutlineGeometry instance if one was not provided.

@@ -633,8 +633,8 @@ function computeWallAttributes(positions, options) {
         bitangents[i2] = bitangent.z;
 
         bitangents[i + length] = bitangent.x;
-        bitangents[i1 + length] = bitangent.y;
-        bitangents[i2 + length] = bitangent.z;
+        bitangents[i1 + length] = bitangents[i1];
+        bitangents[i2 + length] = bitangents[i2];
       }
     }
   }
