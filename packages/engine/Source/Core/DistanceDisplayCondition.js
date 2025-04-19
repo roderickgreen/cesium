@@ -89,7 +89,7 @@ DistanceDisplayCondition.pack = function (value, array, startingIndex) {
 /**
  * Retrieves an instance from a packed array.
  *
- * @param {number[]} array The packed array.
+ * @param {ArrayLike<number>} array The packed array.
  * @param {number} [startingIndex=0] The starting index of the element to be unpacked.
  * @param {DistanceDisplayCondition} [result] The object into which to store the result.
  * @returns {DistanceDisplayCondition} The modified result parameter or a new DistanceDisplayCondition instance if one was not provided.
