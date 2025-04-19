@@ -20,7 +20,7 @@ const PackableForInterpolation = {
    * Converts a packed array into a form suitable for interpolation.
    * @function
    *
-   * @param {ArrayLike<number>} packedArray The packed array.
+   * @param {number[]} packedArray The packed array.
    * @param {number} [startingIndex=0] The index of the first element to be converted.
    * @param {number} [lastIndex=packedArray.length] The index of the last element to be converted.
    * @param {number[]} [result] The object into which to store the result.
@@ -32,7 +32,7 @@ const PackableForInterpolation = {
    * @function
    *
    * @param {number[]} array The array previously packed for interpolation.
-   * @param {ArrayLike<number>} sourceArray The original packed array.
+   * @param {number[]} sourceArray The original packed array.
    * @param {number} [startingIndex=0] The startingIndex used to convert the array.
    * @param {number} [lastIndex=packedArray.length] The lastIndex used to convert the array.
    * @param {object} [result] The object into which to store the result.
