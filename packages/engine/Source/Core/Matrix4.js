@@ -135,7 +135,7 @@ Matrix4.pack = function (value, array, startingIndex) {
 /**
  * Retrieves an instance from a packed array.
  *
- * @param {number[]} array The packed array.
+ * @param {ArrayLike<number>} array The packed array.
  * @param {number} [startingIndex=0] The starting index of the element to be unpacked.
  * @param {Matrix4} [result] The object into which to store the result.
  * @returns {Matrix4} The modified result parameter or a new Matrix4 instance if one was not provided.
@@ -206,7 +206,7 @@ Matrix4.packArray = function (array, result) {
 /**
  * Unpacks an array of column-major matrix components into an array of Matrix4s.
  *
- * @param {number[]} array The array of components to unpack.
+ * @param {ArrayLike<number>} array The array of components to unpack.
  * @param {Matrix4[]} [result] The array onto which to store the result.
  * @returns {Matrix4[]} The unpacked array.
  */
@@ -287,7 +287,7 @@ Matrix4.clone = function (matrix, result) {
  * Creates a Matrix4 from 16 consecutive elements in an array.
  * @function
  *
- * @param {number[]} array The array whose 16 consecutive elements correspond to the positions of the matrix.  Assumes column-major order.
+ * @param {ArrayLike<number>} array The array whose 16 consecutive elements correspond to the positions of the matrix.  Assumes column-major order.
  * @param {number} [startingIndex=0] The offset into the array of the first element, which corresponds to first column first row position in the matrix.
  * @param {Matrix4} [result] The object onto which to store the result.
  * @returns {Matrix4} The modified result parameter or a new Matrix4 instance if one was not provided.
@@ -311,7 +311,7 @@ Matrix4.fromArray = Matrix4.unpack;
 /**
  * Computes a Matrix4 instance from a column-major order array.
  *
- * @param {number[]} values The column-major order array.
+ * @param {ArrayLike<number>} values The column-major order array.
  * @param {Matrix4} [result] The object in which the result will be stored, if undefined a new instance will be created.
  * @returns {Matrix4} The modified result parameter, or a new Matrix4 instance if one was not provided.
  */
@@ -327,7 +327,7 @@ Matrix4.fromColumnMajorArray = function (values, result) {
  * Computes a Matrix4 instance from a row-major order array.
  * The resulting matrix will be in column-major order.
  *
- * @param {number[]} values The row-major order array.
+ * @param {ArrayLike<number>} values The row-major order array.
  * @param {Matrix4} [result] The object in which the result will be stored, if undefined a new instance will be created.
  * @returns {Matrix4} The modified result parameter, or a new Matrix4 instance if one was not provided.
  */

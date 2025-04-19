@@ -150,7 +150,7 @@ Cartesian3.pack = function (value, array, startingIndex) {
 /**
  * Retrieves an instance from a packed array.
  *
- * @param {number[]} array The packed array.
+ * @param {ArrayLike<number>} array The packed array.
  * @param {number} [startingIndex=0] The starting index of the element to be unpacked.
  * @param {Cartesian3} [result] The object into which to store the result.
  * @returns {Cartesian3} The modified result parameter or a new Cartesian3 instance if one was not provided.
@@ -206,7 +206,7 @@ Cartesian3.packArray = function (array, result) {
 /**
  * Unpacks an array of cartesian components into an array of Cartesian3s.
  *
- * @param {number[]} array The array of components to unpack.
+ * @param {ArrayLike<number>} array The array of components to unpack.
  * @param {Cartesian3[]} [result] The array onto which to store the result.
  * @returns {Cartesian3[]} The unpacked array.
  */
@@ -237,7 +237,7 @@ Cartesian3.unpackArray = function (array, result) {
  * Creates a Cartesian3 from three consecutive elements in an array.
  * @function
  *
- * @param {number[]} array The array whose three consecutive elements correspond to the x, y, and z components, respectively.
+ * @param {ArrayLike<number>} array The array whose three consecutive elements correspond to the x, y, and z components, respectively.
  * @param {number} [startingIndex=0] The offset into the array of the first element, which corresponds to the x component.
  * @param {Cartesian3} [result] The object onto which to store the result.
  * @returns {Cartesian3} The modified result parameter or a new Cartesian3 instance if one was not provided.

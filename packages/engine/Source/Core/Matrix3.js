@@ -96,7 +96,7 @@ Matrix3.pack = function (value, array, startingIndex) {
 /**
  * Retrieves an instance from a packed array.
  *
- * @param {number[]} array The packed array.
+ * @param {ArrayLike<number>} array The packed array.
  * @param {number} [startingIndex=0] The starting index of the element to be unpacked.
  * @param {Matrix3} [result] The object into which to store the result.
  * @returns {Matrix3} The modified result parameter or a new Matrix3 instance if one was not provided.
@@ -160,7 +160,7 @@ Matrix3.packArray = function (array, result) {
 /**
  * Unpacks an array of column-major matrix components into an array of Matrix3s.
  *
- * @param {number[]} array The array of components to unpack.
+ * @param {ArrayLike<number>} array The array of components to unpack.
  * @param {Matrix3[]} [result] The array onto which to store the result.
  * @returns {Matrix3[]} The unpacked array.
  */
@@ -225,9 +225,9 @@ Matrix3.clone = function (matrix, result) {
 
 /**
  * Creates a Matrix3 from 9 consecutive elements in an array.
- *
  * @function
- * @param {number[]} array The array whose 9 consecutive elements correspond to the positions of the matrix.  Assumes column-major order.
+ *
+ * @param {ArrayLike<number>} array The array whose 9 consecutive elements correspond to the positions of the matrix.  Assumes column-major order.
  * @param {number} [startingIndex=0] The offset into the array of the first element, which corresponds to first column first row position in the matrix.
  * @param {Matrix3} [result] The object onto which to store the result.
  * @returns {Matrix3} The modified result parameter or a new Matrix3 instance if one was not provided.

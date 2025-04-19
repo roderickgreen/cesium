@@ -873,9 +873,10 @@ const dummyOptions = {
 /**
  * Retrieves an instance from a packed array.
  *
- * @param {number[]} array The packed array.
+ * @param {ArrayLike<number>} array The packed array.
  * @param {number} [startingIndex=0] The starting index of the element to be unpacked.
  * @param {PolygonGeometry} [result] The object into which to store the result.
+ * @returns {PolygonGeometry} The modified result parameter or a new PolygonGeometry instance if one was not provided.
  */
 PolygonGeometry.unpack = function (array, startingIndex, result) {
   //>>includeStart('debug', pragmas.debug);
