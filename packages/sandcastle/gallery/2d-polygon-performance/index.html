@@ -1,0 +1,104 @@
+<style>
+  @import url(../templates/bucket.css);
+  #toolbar {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+    width: 22em;
+    overflow-x: hidden;
+  }
+  #toolbar .stratakit-mimic-select-root,
+  #toolbar select,
+  #frustumsField,
+  #frustumsField input[type="text"],
+  #stats {
+    width: 100%;
+    box-sizing: border-box;
+  }
+  #frustumsField {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  #frustumsField input[type="text"] {
+    font-family: monospace;
+    font-size: 12px;
+    padding: 4px;
+  }
+  #frustumsField input[type="text"].invalid {
+    outline: 2px solid #d64545;
+  }
+  #zoomButtons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+  #stats {
+    background: rgba(42, 42, 42, 0.8);
+    padding: 4px 8px;
+    border-radius: 4px;
+    color: #edffff;
+    font-family: monospace;
+    font-size: 12px;
+  }
+  #statsSummary {
+    white-space: pre-line;
+  }
+  #frustumTableWrapper {
+    max-height: 9.5em;
+    overflow: auto;
+    margin-top: 4px;
+  }
+  #frustumTable {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 11px;
+  }
+  #frustumTable th,
+  #frustumTable td {
+    padding: 1px 3px;
+    text-align: right;
+    white-space: nowrap;
+  }
+  #frustumTable th {
+    position: sticky;
+    top: 0;
+    background: #2a2a2a;
+    font-weight: normal;
+    color: #a0b8b8;
+    border-bottom: 1px solid #5a5a5a;
+  }
+  #frustumTable tr.plane td {
+    color: #ffd86b;
+  }
+  #legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px 8px;
+    font-size: 12px;
+  }
+  #legend span {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    white-space: nowrap;
+  }
+  #legend i {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border: 1px solid black;
+  }
+</style>
+<div id="cesiumContainer" class="fullSize"></div>
+<div id="loadingOverlay"><h1>Loading...</h1></div>
+<div id="toolbar">
+  <div id="frustumsField">
+    <label for="frustumBoundaries"
+      >scene.frustumBoundaries2D (meters above the map plane)</label
+    >
+    <input id="frustumBoundaries" type="text" spellcheck="false" />
+  </div>
+  <div id="zoomButtons"></div>
+</div>

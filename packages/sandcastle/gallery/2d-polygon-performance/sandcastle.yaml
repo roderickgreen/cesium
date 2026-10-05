@@ -1,0 +1,9 @@
+title: 2D Polygon Performance
+description: Reproduces slow rendering of many polygons in the 2D infinite-scroll map (https://github.com/CesiumGS/cesium/issues/5026) and shows how the 2D frustum boundaries trade frame rate against depth precision.
+labels:
+  - Development
+  - Geometries
+  - Camera
+development: true
+# TODO: Uncomment this once an image has been created
+#thumbnail: thumbnail.jpg
