@@ -30,6 +30,7 @@ import {
   clone,
   createGuid,
   defined,
+  deprecationWarning,
   destroyObject,
   mergeSort,
 } from "@cesium/core";
@@ -383,14 +384,30 @@ function Scene(options) {
   this.logarithmicDepthFarToNearRatio = 1e9;
 
   /**
-   * Determines the uniform depth size in meters of each frustum of the multifrustum in 2D. If a primitive or model close
-   * to the surface shows z-fighting, decreasing this will eliminate the artifact, but decrease performance. On the
-   * other hand, increasing this will increase performance but may cause z-fighting among primitives close to the surface.
+   * The heights in meters relative to the map plane, in ascending order, at which the depth range of the scene is
+   * split into frustums in 2D. The lowest height is the far plane, so geometry below it is not rendered. Geometry
+   * above the highest height is rendered with one additional frustum that extends up to the nearest geometry.
+   * Boundaries above the nearest geometry, or above the camera, do not create frustums.
+   * <p>
+   * Depth precision within a frustum is proportional to its depth, so z-fighting between primitives at the same
+   * height is avoided by keeping the frustum that contains the map plane shallow. Every draw command is executed
+   * once per frustum that its bounding volume overlaps, so each additional boundary has a rendering cost.
+   * </p>
+   * <p>
+   * The default renders the map plane and everything up to 1,500 kilometers above it in one 1,750 kilometer deep
+   * frustum, and anything higher in a second frustum. An empty array renders the whole depth range with a single
+   * frustum, which is fast but z-fights between primitives close to the surface when zoomed out.
+   * </p>
    *
-   * @type {number}
-   * @default 1.75e6
+   * @type {number[]|undefined}
+   * @default [-2.5e5, 1.5e6]
+   *
+   * @example
+   * // Render geometry up to 10 kilometers above and below the map plane with millimeter depth precision.
+   * scene.frustumBoundaries2D = [-1.0e4, 1.0e4];
    */
-  this.nearToFarDistance2D = 1.75e6;
+  this.frustumBoundaries2D = [-2.5e5, 1.5e6];
+  this._nearToFarDistance2D = 1.75e6;
 
   /**
    * The vertical exaggeration of the scene.
@@ -822,6 +839,35 @@ function updateGlobeListeners(scene, globe) {
 }
 
 Object.defineProperties(Scene.prototype, {
+  /**
+   * Determines the uniform depth size in meters of each frustum of the multifrustum in 2D.
+   * Setting this replaces {@link Scene#frustumBoundaries2D} with one frustum of this depth below the map plane
+   * and one above it.
+   * @memberof Scene.prototype
+   *
+   * @type {number}
+   * @default 1.75e6
+   *
+   * @deprecated Scene.nearToFarDistance2D was deprecated in CesiumJS 1.147 and will be removed in 1.150. Use {@link Scene#frustumBoundaries2D} instead.
+   */
+  nearToFarDistance2D: {
+    get: function () {
+      deprecationWarning(
+        "Scene.nearToFarDistance2D",
+        "Scene.nearToFarDistance2D was deprecated in CesiumJS 1.147 and will be removed in 1.150. Use Scene.frustumBoundaries2D instead.",
+      );
+      return this._nearToFarDistance2D;
+    },
+    set: function (value) {
+      deprecationWarning(
+        "Scene.nearToFarDistance2D",
+        "Scene.nearToFarDistance2D was deprecated in CesiumJS 1.147 and will be removed in 1.150. Use Scene.frustumBoundaries2D instead.",
+      );
+      this._nearToFarDistance2D = value;
+      this.frustumBoundaries2D = [-value, 0.0, value];
+    },
+  },
+
   /**
    * Gets the canvas element to which this scene is bound.
    * @memberof Scene.prototype
@@ -2851,7 +2897,8 @@ function executeCommands(scene, passState) {
 
     if (scene.mode === SceneMode.SCENE2D) {
       // To avoid z-fighting in 2D, move the camera to just before the frustum
-      // and scale the frustum depth to be in [1.0, nearToFarDistance2D].
+      // so that the depth precision depends on the depth of the frustum rather
+      // than on the height of the camera.
       camera.position.z = height2D - frustumCommands.near + 1.0;
       frustum.far = Math.max(1.0, frustumCommands.far - frustumCommands.near);
       frustum.near = 1.0;

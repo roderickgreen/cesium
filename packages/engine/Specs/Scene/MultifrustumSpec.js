@@ -21,6 +21,7 @@ import {
   VertexArray,
   BillboardCollection,
   BlendingState,
+  SceneMode,
   TextureAtlas,
 } from "../../index.js";
 import createScene from "../../../../Specs/createScene.js";
@@ -202,9 +203,16 @@ describe(
       });
     });
 
-    function createPrimitive(bounded, closestFrustum) {
+    function createPrimitive(
+      bounded,
+      closestFrustum,
+      boundingSphereRadius,
+      boundingSphereCenter,
+    ) {
       bounded = bounded ?? true;
       closestFrustum = closestFrustum ?? false;
+      boundingSphereRadius = boundingSphereRadius ?? 500000.0;
+      boundingSphereCenter = boundingSphereCenter ?? Cartesian3.ZERO;
 
       function Primitive() {
         this._va = undefined;
@@ -290,7 +298,10 @@ describe(
             modelMatrix: this._modelMatrix,
             executeInClosestFrustum: closestFrustum,
             boundingVolume: bounded
-              ? new BoundingSphere(Cartesian3.clone(Cartesian3.ZERO), 500000.0)
+              ? new BoundingSphere(
+                  Cartesian3.clone(boundingSphereCenter),
+                  boundingSphereRadius,
+                )
               : undefined,
             pass: Pass.OPAQUE,
           }),
@@ -347,6 +358,211 @@ describe(
 
     it("render without a central body or any primitives", function () {
       scene.renderForSpecs();
+    });
+
+    function morphTo2D(cameraHeight) {
+      // Move the camera to a valid position so the morph can project it to 2D.
+      scene.camera.setView({
+        destination: Cartesian3.fromDegrees(0.0, 0.0, 10000000.0),
+      });
+      scene.morphTo2D(0.0);
+      expect(scene.mode).toEqual(SceneMode.SCENE2D);
+      // In 2D the camera height is only used to place the frustums.
+      scene.camera.position.z = cameraHeight;
+    }
+
+    function expectFrustumsToBeContiguous(frustumCommandsList) {
+      expect(frustumCommandsList[0].near).toEqual(scene.camera.frustum.near);
+      for (let i = 1; i < frustumCommandsList.length; ++i) {
+        expect(frustumCommandsList[i].near).toEqual(
+          frustumCommandsList[i - 1].far,
+        );
+      }
+    }
+
+    it("splits the depth range in 2D at the default frustum boundaries", function () {
+      morphTo2D(1.0e7);
+      // A bounding volume that reaches far above the map plane, like the bounding
+      // sphere of a dataset spanning the whole map, must not slice the empty depth
+      // above the plane into many frustums.
+      primitives.add(createPrimitive(true, false, 2.0e7));
+      scene.renderForSpecs();
+
+      const boundaries = scene.frustumBoundaries2D;
+      expect(boundaries).toEqual([-2.5e5, 1.5e6]);
+
+      const height = scene.camera.position.z;
+      const frustumCommandsList = scene.frustumCommandsList;
+      expect(frustumCommandsList.length).toEqual(2);
+      expectFrustumsToBeContiguous(frustumCommandsList);
+
+      // The last frustum contains the map plane and lies between the two boundaries.
+      const last = frustumCommandsList[1];
+      expect(last.far).toEqualEpsilon(
+        height - boundaries[0],
+        CesiumMath.EPSILON7,
+      );
+      expect(last.near).toEqualEpsilon(
+        height - boundaries[1],
+        CesiumMath.EPSILON7,
+      );
+    });
+
+    it("renders the whole depth range in 2D with one frustum without frustum boundaries", function () {
+      morphTo2D(1.0e7);
+      primitives.add(createPrimitive(true, false, 2.0e7));
+
+      scene.frustumBoundaries2D = [];
+      scene.renderForSpecs();
+      expect(scene.frustumCommandsList.length).toEqual(1);
+      // Without a lowest boundary the far plane is set by the farthest bounding volume.
+      expect(scene.frustumCommandsList[0].far).toBeGreaterThan(
+        scene.camera.position.z,
+      );
+
+      scene.frustumBoundaries2D = undefined;
+      scene.renderForSpecs();
+      expect(scene.frustumCommandsList.length).toEqual(1);
+    });
+
+    it("uses the configured frustum boundaries in 2D", function () {
+      morphTo2D(1.0e7);
+      primitives.add(createPrimitive(true, false, 2.0e7));
+
+      // Uniform slicing of the depth range: one frustum between each pair of
+      // boundaries, plus one from the highest boundary up to the nearest geometry.
+      const boundaries = [-1.75e6, 0.0, 1.75e6, 3.5e6, 5.25e6];
+      scene.frustumBoundaries2D = boundaries;
+      scene.renderForSpecs();
+
+      const height = scene.camera.position.z;
+      const frustumCommandsList = scene.frustumCommandsList;
+      const length = frustumCommandsList.length;
+      expect(length).toEqual(boundaries.length);
+      expectFrustumsToBeContiguous(frustumCommandsList);
+      for (let i = 1; i < boundaries.length; ++i) {
+        const frustumCommands = frustumCommandsList[length - i];
+        expect(frustumCommands.far).toEqualEpsilon(
+          height - boundaries[i - 1],
+          CesiumMath.EPSILON7,
+        );
+        expect(frustumCommands.near).toEqualEpsilon(
+          height - boundaries[i],
+          CesiumMath.EPSILON7,
+        );
+      }
+    });
+
+    it("does not create frustums above the nearest geometry in 2D", function () {
+      morphTo2D(1.0e7);
+      // A bounding sphere reaching 2,000 kilometers above the map plane.
+      primitives.add(createPrimitive(true, false, 2.0e6));
+
+      scene.frustumBoundaries2D = [-1.75e6, 0.0, 1.75e6, 3.5e6, 2.0e7];
+      scene.renderForSpecs();
+
+      // Two frustums below 1,750 kilometers, one from there up to the sphere,
+      // and none above it.
+      const height = scene.camera.position.z;
+      const frustumCommandsList = scene.frustumCommandsList;
+      expect(frustumCommandsList.length).toEqual(3);
+      expect(frustumCommandsList[0].near).toEqualEpsilon(
+        height - 2.0e6,
+        CesiumMath.EPSILON7,
+      );
+      expect(frustumCommandsList[0].far).toEqualEpsilon(
+        height - 1.75e6,
+        CesiumMath.EPSILON7,
+      );
+    });
+
+    it("creates no frustums in 2D when there is nothing to draw", function () {
+      morphTo2D(1.0e7);
+      scene.renderForSpecs();
+      expect(scene.frustumCommandsList.length).toEqual(0);
+    });
+
+    it("creates no frustums in 2D when all geometry is below the lowest boundary", function () {
+      morphTo2D(1.0e7);
+      // In 2D world coordinates the x axis is the height above the map plane.
+      primitives.add(
+        createPrimitive(true, false, 1.0e4, new Cartesian3(-5.0e5, 0.0, 0.0)),
+      );
+      scene.renderForSpecs();
+      expect(scene.frustumCommandsList.length).toEqual(0);
+    });
+
+    it("creates no frustums in 2D when all boundaries are above the camera", function () {
+      morphTo2D(5.0e5);
+      primitives.add(createPrimitive(true, false, 1.0e5));
+      scene.frustumBoundaries2D = [1.0e6, 2.0e6];
+      scene.renderForSpecs();
+      expect(scene.frustumCommandsList.length).toEqual(0);
+    });
+
+    it("does not create an empty frustum in 2D for geometry above the highest boundary", function () {
+      morphTo2D(1.0e7);
+      const center = new Cartesian3(5.0e6, 0.0, 0.0);
+      primitives.add(createPrimitive(true, false, 1.0e5, center));
+      scene.renderForSpecs();
+
+      const height = scene.camera.position.z;
+      const frustumCommandsList = scene.frustumCommandsList;
+      expect(frustumCommandsList.length).toEqual(1);
+      expect(frustumCommandsList[0].near).toEqualEpsilon(
+        height - center.x - 1.0e5,
+        CesiumMath.EPSILON7,
+      );
+      expect(frustumCommandsList[0].far).toBeGreaterThan(
+        frustumCommandsList[0].near,
+      );
+      expect(frustumCommandsList[0].far).toBeLessThan(height);
+    });
+
+    it("skips boundaries in 2D that would create a frustum less than one meter deep", function () {
+      morphTo2D(1.0e7);
+      primitives.add(createPrimitive(true, false, 2.0e7));
+
+      scene.frustumBoundaries2D = [-2.5e5, -2.5e5 + 0.5, 1.5e6, 1.5e6 + 0.5];
+      scene.renderForSpecs();
+
+      const height = scene.camera.position.z;
+      const frustumCommandsList = scene.frustumCommandsList;
+      expect(frustumCommandsList.length).toEqual(2);
+      expectFrustumsToBeContiguous(frustumCommandsList);
+      // Of two boundaries less than a meter apart the higher one is kept.
+      expect(frustumCommandsList[1].near).toEqual(height - (1.5e6 + 0.5));
+      // The frustum reaches the far plane rather than stopping half a meter short.
+      expect(frustumCommandsList[1].far).toEqualEpsilon(
+        height + 2.5e5,
+        CesiumMath.EPSILON7,
+      );
+    });
+
+    it("throws in 2D when the frustum boundaries are not ascending finite numbers", function () {
+      morphTo2D(1.0e7);
+      primitives.add(createPrimitive(true, false, 2.0e7));
+
+      scene.frustumBoundaries2D = [1.0, 0.0];
+      expect(function () {
+        scene.renderForSpecs();
+      }).toThrowDeveloperError();
+
+      scene.frustumBoundaries2D = [0.0, Number.NaN];
+      expect(function () {
+        scene.renderForSpecs();
+      }).toThrowDeveloperError();
+
+      scene.frustumBoundaries2D = 1.0e6;
+      expect(function () {
+        scene.renderForSpecs();
+      }).toThrowDeveloperError();
+    });
+
+    it("sets the frustum boundaries in 2D from the deprecated nearToFarDistance2D", function () {
+      scene.nearToFarDistance2D = 1.0e6;
+      expect(scene.nearToFarDistance2D).toEqual(1.0e6);
+      expect(scene.frustumBoundaries2D).toEqual([-1.0e6, 0.0, 1.0e6]);
     });
 
     it("does not crash when near plane is greater than or equal to the far plane", function () {

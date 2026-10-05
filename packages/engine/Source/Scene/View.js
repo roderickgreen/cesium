@@ -2,6 +2,7 @@ import {
   BoundingRectangle,
   Cartesian3,
   CullingVolume,
+  DeveloperError,
   Interval,
   Math as CesiumMath,
   Matrix4,
@@ -87,6 +88,16 @@ function View(scene, camera, viewport) {
   // Acts similar to a ManagedArray.
   this._commandExtents = [];
 }
+
+const scratchFrustumSplits2D = [];
+
+/**
+ * In 2D each frustum is rendered with its near plane one meter in front of the
+ * camera and its far plane at the frustum's depth, so a frustum less than one
+ * meter deep would have coincident near and far planes.
+ * @private
+ */
+const MINIMUM_FRUSTUM_DEPTH_2D = 1.0;
 
 const scratchPosition0 = new Cartesian3();
 const scratchPosition1 = new Cartesian3();
@@ -174,8 +185,6 @@ function updateFrustums(view, scene, near, far) {
     ? scene.logarithmicDepthFarToNearRatio
     : scene.farToNearRatio;
   const is2D = scene.mode === SceneMode.SCENE2D;
-  const nearToFarDistance2D = scene.nearToFarDistance2D;
-
   // Extend the far plane slightly further to prevent geometry clipping against the far plane.
   far *= 1.0 + CesiumMath.EPSILON2;
 
@@ -186,15 +195,74 @@ function updateFrustums(view, scene, near, far) {
   far = Math.max(Math.min(far, camera.frustum.far), near);
 
   let numFrustums;
+  const splits2D = scratchFrustumSplits2D;
   if (is2D) {
-    // The multifrustum for 2D is uniformly distributed. To avoid z-fighting in 2D,
-    // the camera is moved to just before the frustum and the frustum depth is scaled
-    // to be in [1.0, nearToFarDistance2D].
-    far = Math.min(far, camera.position.z + scene.nearToFarDistance2D);
-    near = Math.min(near, far);
-    numFrustums = Math.ceil(
-      Math.max(1.0, far - near) / scene.nearToFarDistance2D,
-    );
+    // In 2D the depth range is split at fixed heights relative to the map plane
+    // rather than by a ratio. The lowest boundary is the far plane. The depth
+    // above the highest boundary, up to the nearest geometry, is covered by one
+    // more frustum.
+    const frustumBoundaries2D = scene.frustumBoundaries2D;
+    const cameraHeight2D = camera.position.z;
+
+    //>>includeStart('debug', pragmas.debug);
+    if (defined(frustumBoundaries2D)) {
+      if (!Array.isArray(frustumBoundaries2D)) {
+        throw new DeveloperError(
+          "scene.frustumBoundaries2D must be an array of finite numbers in ascending order.",
+        );
+      }
+      for (let i = 0; i < frustumBoundaries2D.length; ++i) {
+        const boundary = frustumBoundaries2D[i];
+        if (
+          typeof boundary !== "number" ||
+          !isFinite(boundary) ||
+          (i > 0 && boundary <= frustumBoundaries2D[i - 1])
+        ) {
+          throw new DeveloperError(
+            "scene.frustumBoundaries2D must be an array of finite numbers in ascending order.",
+          );
+        }
+      }
+    }
+    //>>includeEnd('debug');
+
+    const numBoundaries2D = defined(frustumBoundaries2D)
+      ? frustumBoundaries2D.length
+      : 0;
+    if (numBoundaries2D > 0) {
+      far = Math.max(
+        Math.min(far, cameraHeight2D - frustumBoundaries2D[0]),
+        camera.frustum.near,
+      );
+      near = Math.min(near, far);
+    }
+
+    // Collect the depths at which [near, far] is split, from near to far.
+    // Boundaries above the nearest geometry or above the camera clamp to near,
+    // boundaries below the farthest geometry clamp to far, and a boundary too
+    // close to the previous split is skipped, so every frustum is at least
+    // MINIMUM_FRUSTUM_DEPTH_2D deep. An empty depth range, for example when
+    // there is nothing to draw, yields no frustums, as in 3D.
+    splits2D.length = 0;
+    splits2D.push(near);
+    for (let i = numBoundaries2D - 1; i > 0; --i) {
+      const depth = CesiumMath.clamp(
+        cameraHeight2D - frustumBoundaries2D[i],
+        near,
+        far,
+      );
+      if (depth - splits2D[splits2D.length - 1] >= MINIMUM_FRUSTUM_DEPTH_2D) {
+        splits2D.push(depth);
+      }
+    }
+    const lastSplit = splits2D.length - 1;
+    if (far - splits2D[lastSplit] >= MINIMUM_FRUSTUM_DEPTH_2D) {
+      splits2D.push(far);
+    } else if (lastSplit > 0) {
+      // Extend the farthest frustum to the far plane instead of adding a thin one.
+      splits2D[lastSplit] = far;
+    }
+    numFrustums = splits2D.length - 1;
   } else {
     // The multifrustum for 3D/CV is non-uniformly distributed.
     numFrustums = Math.ceil(Math.log(far / near) / Math.log(farToNearRatio));
@@ -207,11 +275,8 @@ function updateFrustums(view, scene, near, far) {
     let curFar;
 
     if (is2D) {
-      curNear = Math.min(
-        far - nearToFarDistance2D,
-        near + m * nearToFarDistance2D,
-      );
-      curFar = Math.min(far, curNear + nearToFarDistance2D);
+      curNear = splits2D[m];
+      curFar = splits2D[m + 1];
     } else {
       curNear = Math.max(near, Math.pow(farToNearRatio, m) * near);
       curFar = Math.min(far, farToNearRatio * curNear);

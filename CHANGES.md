@@ -1,5 +1,21 @@
 # Change Log
 
+## 1.147 - 2026-11-02
+
+### @cesium/engine
+
+#### Additions :tada:
+
+- Added `Scene.frustumBoundaries2D` to control the heights relative to the map plane at which the depth range of the scene is split into frustums in 2D. By default the map plane and everything up to 1,500 kilometers above it are rendered with one frustum and anything higher with a second, instead of splitting the whole depth range into uniform 1,750 kilometer frustums.
+
+#### Fixes :wrench:
+
+- Fixed slow rendering in 2D when the scene contains geometry with large bounding volumes, such as a batch of many polygons spanning a country or the world. Every draw command was executed once per uniform frustum that its bounding volume overlapped, up to nine times. [#5026](https://github.com/CesiumGS/cesium/issues/5026)
+
+#### Deprecated :hourglass_flowing_sand:
+
+- `Scene.nearToFarDistance2D` has been deprecated and will be removed in 1.150. Use `Scene.frustumBoundaries2D` instead.
+
 ## 1.146 - 2026-10-01
 
 ### Major Announcements :loudspeaker:
